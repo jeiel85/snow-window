@@ -239,6 +239,10 @@ internal sealed class SnowEngine : IDisposable
         {
             created = new SnowRenderer();
             created.SetMonitors(monitors);
+            TrimFailures(failures, now);
+            Log.Info(failures.Count > 0
+                ? $"그래픽 장치를 다시 만들었습니다 (모니터 {monitors.Count}대, 최근 1분 실패 {failures.Count}회)"
+                : $"그래픽 장치 준비됨 (모니터 {monitors.Count}대)");
             return created;
         }
         catch (Exception ex)
@@ -254,6 +258,11 @@ internal sealed class SnowEngine : IDisposable
     private static void RecordFailure(Queue<double> failures, double now)
     {
         failures.Enqueue(now);
+        TrimFailures(failures, now);
+    }
+
+    private static void TrimFailures(Queue<double> failures, double now)
+    {
         while (failures.Count > 0 && failures.Peek() < now - 60)
         {
             failures.Dequeue();

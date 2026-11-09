@@ -19,6 +19,7 @@ internal sealed class TrayApp : ApplicationContext
     public TrayApp()
     {
         _settings = AppSettings.Load();
+        SyncStartupPath();
 
         _enabledItem = new ToolStripMenuItem("눈 내리기", null, (_, _) => SetEnabled(!_settings.Enabled));
         var intensityMenu = new ToolStripMenuItem("눈의 양");
@@ -114,6 +115,23 @@ internal sealed class TrayApp : ApplicationContext
         _engine.SetSmoothMotion(smooth);
         SaveSettings();
         RefreshMenu();
+    }
+
+    private static void SyncStartupPath()
+    {
+        try
+        {
+            string? previous = StartupRegistration.SyncToCurrentPath();
+            if (previous != null)
+            {
+                Log.Info($"시작 시 실행 경로를 지금 실행 파일로 바꿨습니다 (이전: {previous})");
+            }
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            // 경로를 못 맞춰도 앱 실행에는 지장이 없다. 메뉴에서 다시 켜면 지금 경로로 등록된다.
+            Log.Error("시작 시 실행 경로를 확인하지 못했습니다", ex);
+        }
     }
 
     private void ToggleStartup()
