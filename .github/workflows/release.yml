@@ -1,0 +1,63 @@
+name: Release
+
+# v0.1.1 처럼 태그를 올리면 테스트 후 런타임 포함 단일 exe를 만들어 GitHub 릴리스에 올린다.
+# 소개 페이지·README의 다운로드 링크(releases/latest/download/SnowWindow-win-x64.exe)가
+# 이 자산 이름을 가리키므로 이름을 바꾸지 않는다.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Check tag matches project version
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $match = Select-String -Path src/SnowWindow/SnowWindow.csproj -Pattern '<Version>([^<]+)</Version>'
+          if (-not $match) { throw 'SnowWindow.csproj 에 <Version> 이 없습니다.' }
+          $version = $match.Matches[0].Groups[1].Value
+          if ($tag -ne "v$version") { throw "태그 $tag 와 프로젝트 버전 v$version 이 다릅니다." }
+
+      - name: Test
+        run: dotnet test SnowWindow.sln -c Release
+
+      - name: Publish single exe
+        run: >
+          dotnet publish src/SnowWindow -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $asset = 'SnowWindow-win-x64.exe'
+          Copy-Item publish/SnowWindow.exe $asset
+          $sha = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sizeMb = [math]::Round((Get-Item $asset).Length / 1MB)
+          $notes = @"
+          ## 내려받기
+
+          **[$asset](https://github.com/${{ github.repository }}/releases/download/$tag/$asset)** (약 ${sizeMb}MB) · Windows 10/11 64비트
+
+          - 설치 없이 exe 하나만 실행하면 됩니다. .NET 런타임이 들어 있어 따로 설치할 필요가 없어요.
+          - 코드 서명을 하지 않아서 처음 실행할 때 "Windows의 PC 보호" 창이 뜰 수 있습니다. **추가 정보 → 실행**을 누르세요.
+          - SHA-256: ``$sha``
+
+          "@
+          Set-Content -Path notes.md -Value $notes -Encoding utf8
+          gh release create $tag $asset --title "Snow Window $tag" --notes-file notes.md --generate-notes --verify-tag

@@ -26,7 +26,7 @@ Right-click the snowflake icon in the notification area to open the menu. Left-c
 | Scatter snow with mouse (마우스로 눈 흩날리기) | Turn mouse interaction on/off |
 | Smooth motion (부드러운 움직임, 60fps) | Default is 30fps. 60fps is smoother but roughly doubles the CPU and GPU load |
 | Clear piled snow (쌓인 눈 치우기) | Removes all piled snow |
-| Run at Windows startup (Windows 시작 시 실행) | Registers/unregisters `HKCU\...\Run` |
+| Run at Windows startup (Windows 시작 시 실행) | Registers/unregisters `HKCU\...\Run`. While it is on, each launch points the entry at the exe you just ran, so moving or replacing the exe keeps it working |
 | Open log folder (로그 폴더 열기) | `%LOCALAPPDATA%\SnowWindow` |
 
 Settings are saved in `%APPDATA%\SnowWindow\settings.json`.
@@ -42,13 +42,19 @@ dotnet test SnowWindow.sln
 
 Executable: `src/SnowWindow/bin/Release/net10.0-windows/win-x64/SnowWindow.exe`
 
-Release build (single self-contained exe, about 50 MB):
+## Releasing
+
+1. Bump `<Version>` in `src/SnowWindow/SnowWindow.csproj` (and the version shown on the landing page) and merge it to `main`.
+2. Push a matching tag, e.g. `git tag v0.1.1 && git push origin v0.1.1`.
+3. The `Release` workflow checks that the tag matches `<Version>`, runs the tests, builds a single self-contained exe (about 50 MB) and publishes a GitHub release with it as `SnowWindow-win-x64.exe` plus its SHA-256. The download links on the landing page and in this README point to that asset name, so keep it.
+
+To build the same exe locally:
 
 ```bash
 dotnet publish src/SnowWindow -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
-Upload `publish/SnowWindow.exe` to the release as `SnowWindow-win-x64.exe` — the download links on the landing page and in this README point to that asset name.
+`CI` builds and tests every push to `main` and every pull request.
 
 The landing page is the single file `docs/index.html`, served by GitHub Pages from the `/docs` folder on `main`.
 
