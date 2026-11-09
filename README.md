@@ -4,6 +4,8 @@ A Windows tray app that makes snow fall across the desktop and every window, and
 
 **[Download (Windows 10/11, 64-bit)](https://github.com/jeiel85/snow-window/releases/latest/download/SnowWindow-win-x64.exe)** · [Landing page](https://jeiel85.github.io/snow-window/) · [All releases](https://github.com/jeiel85/snow-window/releases)
 
+![Snow Window running: snow piled on a browser window's top edge and above the taskbar, with flakes falling over the desktop](docs/screenshot.jpg)
+
 Just run the downloaded exe — no installer and no .NET runtime needed. The exe is not code-signed, so on first launch Windows may show "Windows protected your PC"; click **More info → Run anyway**.
 
 - Snow falls across every monitor (over the top of windows)

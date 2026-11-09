@@ -9,6 +9,11 @@
 <meta property="og:title" content="Snow Window · 제 PC에 첫 눈이 내립니다">
 <meta property="og:description" content="윈도우 바탕화면과 열어 둔 모든 창 위에 눈이 내리고 쌓이는 무료 트레이 앱.">
 <meta property="og:url" content="https://jeiel85.github.io/snow-window/">
+<meta property="og:image" content="https://jeiel85.github.io/snow-window/screenshot.jpg">
+<meta property="og:image:width" content="1920">
+<meta property="og:image:height" content="1080">
+<meta property="og:image:alt" content="브라우저 창 윗변과 작업 표시줄 위에 눈이 쌓인 Snow Window 실행 화면">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#1E2448">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='31' fill='%231E2448'/%3E%3Cg stroke='white' stroke-width='4.5' stroke-linecap='round' fill='none'%3E%3Cpath d='M32 10v44M13 21l38 22M13 43l38-22'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -301,6 +306,14 @@
     padding: 72px 0 24px;
   }
 
+  .desk .shot { grid-column: 1 / 13; }
+
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   .desk .features { grid-column: 1 / 8; }
   .desk .install { grid-column: 8 / 13; margin-top: 96px; }
   .desk .how { grid-column: 2 / 10; }
@@ -439,6 +452,7 @@
       padding-top: 40px;
     }
 
+    .desk .shot,
     .desk .features,
     .desk .install,
     .desk .how { grid-column: 1; margin-top: 0; }
@@ -493,6 +507,11 @@
   </section>
 
   <section class="desk" aria-label="앱 소개">
+    <article class="win shot" data-snow data-inset="6" aria-labelledby="t-shot">
+      <header class="titlebar"><h2 class="title" id="t-shot">실제 화면</h2></header>
+      <img src="screenshot.jpg" width="1920" height="1080" loading="lazy" alt="Snow Window를 켠 모니터 화면. 브라우저 창 윗변과 작업 표시줄 위에 눈이 쌓여 있고, 바탕화면 위로 눈송이가 내린다.">
+    </article>
+
     <article class="win features" data-snow data-inset="6" aria-labelledby="t-features">
       <header class="titlebar"><h2 class="title" id="t-features">할 수 있는 것</h2></header>
       <ul class="win-body list">
