@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snow Window · 제 PC에 첫 눈이 내립니다</title>
+<meta name="description" content="윈도우 바탕화면과 열어 둔 모든 창 위에 눈이 내리고 쌓이는 무료 트레이 앱. 창을 흔들면 눈이 털리고, 마우스로 쓸면 흩날립니다.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Snow Window · 제 PC에 첫 눈이 내립니다">
+<meta property="og:description" content="윈도우 바탕화면과 열어 둔 모든 창 위에 눈이 내리고 쌓이는 무료 트레이 앱.">
+<meta property="og:url" content="https://jeiel85.github.io/snow-window/">
+<meta name="theme-color" content="#1E2448">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='31' fill='%231E2448'/%3E%3Cg stroke='white' stroke-width='4.5' stroke-linecap='round' fill='none'%3E%3Cpath d='M32 10v44M13 21l38 22M13 43l38-22'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@200;400&family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky-top: #1E2448;
+    --sky-mid: #353B69;
+    --sky-low: #6B6790;
+    --on-sky: #EDEFFC;
+    --on-sky-soft: #B9BDDD;
+    --pane: #F2F3F8;
+    --pane-bar: #E6E8F1;
+    --pane-line: #D6D9E6;
+    --ink: #1A1F33;
+    --ink-soft: #565D7A;
+    --lamp: #F6C36A;
+    --lamp-ink: #2A1E05;
+    --taskbar: rgba(15, 18, 38, 0.8);
+    --chrome: "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+    --body: "IBM Plex Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    --display: "Hahmlet", "Batang", serif;
+    --mono: "IBM Plex Mono", Consolas, monospace;
+    --taskbar-h: 48px;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { background: var(--sky-top); }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--on-sky);
+    background: var(--sky-top);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.7;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    padding-bottom: calc(var(--taskbar-h) + 24px);
+  }
+
+  /* 고정 배경: 해 질 녘 눈 오는 하늘 (모바일에서 background-attachment: fixed 대신) */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(120% 60% at 70% 105%, rgba(246, 195, 106, 0.16), transparent 60%),
+      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
+  }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--lamp);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  #snow {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  .page {
+    width: min(1180px, 100% - 32px);
+    margin: 0 auto;
+  }
+
+  /* ---------- 첫 화면 ---------- */
+  .hero {
+    min-height: calc(100svh - var(--taskbar-h));
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    align-items: center;
+    gap: clamp(32px, 5vw, 72px);
+    padding: clamp(56px, 9vh, 112px) 0 clamp(40px, 7vh, 88px);
+  }
+
+  .eyebrow {
+    margin: 0 0 40px;
+    font-family: var(--chrome);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--on-sky-soft);
+  }
+
+  h1 {
+    margin: 0 0 32px;
+    font-family: var(--display);
+    font-size: clamp(56px, 5.6vw, 84px);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    font-weight: 200;
+  }
+
+  /* 줄마다 눈이 쌓이므로 줄이 접히지 않게 한다 */
+  h1 span {
+    display: block;
+    width: fit-content;
+    white-space: nowrap;
+  }
+
+  h1 span + span {
+    margin-top: 0.3em;
+    font-weight: 400;
+  }
+
+  .lede {
+    max-width: 30em;
+    margin: 0 0 36px;
+    font-size: clamp(16px, 1.5vw, 18.5px);
+    color: var(--on-sky-soft);
+  }
+
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 0 22px;
+    border-radius: 10px;
+    font-family: var(--body);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--lamp);
+    color: var(--lamp-ink);
+    border: 0;
+    box-shadow: 0 10px 28px rgba(246, 195, 106, 0.22);
+  }
+
+  .btn-primary:hover { background: #F9D08A; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--on-sky);
+    border: 1px solid rgba(237, 239, 252, 0.34);
+  }
+
+  .btn-ghost:hover { background: rgba(237, 239, 252, 0.08); }
+
+  .meta {
+    margin: 0;
+    font-family: var(--chrome);
+    font-size: 13px;
+    color: var(--on-sky-soft);
+  }
+
+  /* ---------- 창 ---------- */
+  .win {
+    background: var(--pane);
+    color: var(--ink);
+    border-radius: 10px;
+    box-shadow: 0 22px 60px rgba(8, 10, 32, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 6px 0 16px;
+    background: var(--pane-bar);
+    border-bottom: 1px solid var(--pane-line);
+    font-family: var(--chrome);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .titlebar .title {
+    flex: 1;
+    margin: 0;
+    font-family: var(--chrome);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 40px;
+    color: var(--ink-soft);
+  }
+
+  .win-body {
+    margin: 0;
+    padding: 22px 24px 24px;
+    font-size: 15.5px;
+  }
+
+  .win-body p { margin: 0 0 14px; }
+  .win-body p:last-child { margin-bottom: 0; }
+  .win-body b { font-weight: 600; }
+
+  /* 데모 창 */
+  .demo-slot { position: relative; }
+
+  .demo {
+    position: relative;
+    z-index: 10;
+    will-change: transform;
+  }
+
+  .demo .titlebar {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .demo.dragging .titlebar { cursor: grabbing; }
+
+  .controls { display: flex; }
+
+  .controls button {
+    width: 42px;
+    height: 32px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-soft);
+    font: 14px var(--chrome);
+    cursor: pointer;
+  }
+
+  .controls button:hover { background: rgba(26, 31, 51, 0.08); }
+  .controls button.close:hover { background: #C42B1C; color: #fff; }
+
+  .demo .win-body { padding-top: 26px; }
+
+  .btn-small {
+    min-height: 40px;
+    padding: 0 16px;
+    margin: 4px 0 18px;
+    border-radius: 8px;
+    border: 1px solid var(--pane-line);
+    background: #fff;
+    color: var(--ink);
+    font: 600 14px var(--body);
+    cursor: pointer;
+  }
+
+  .btn-small:hover { background: #F7F8FC; }
+
+  .note {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .demo-closed {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+    border: 1px dashed rgba(237, 239, 252, 0.28);
+    border-radius: 10px;
+    font-size: 15px;
+    color: var(--on-sky-soft);
+  }
+
+  .demo-slot.closed .demo { visibility: hidden; }
+  .demo-slot.closed .demo-closed { display: flex; }
+
+  /* ---------- 창 배치 ---------- */
+  .desk {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 56px 32px;
+    padding: 72px 0 24px;
+  }
+
+  .desk .features { grid-column: 1 / 8; }
+  .desk .install { grid-column: 8 / 13; margin-top: 96px; }
+  .desk .how { grid-column: 2 / 10; }
+
+  .list {
+    list-style: none;
+    padding: 22px 24px 24px;
+  }
+
+  .list li + li {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--pane-line);
+  }
+
+  .steps {
+    padding: 22px 24px 24px 46px;
+  }
+
+  .steps li + li { margin-top: 12px; }
+  .steps li::marker { font-family: var(--mono); color: var(--ink-soft); }
+
+  .steps kbd {
+    font: 13px var(--chrome);
+    padding: 1px 6px;
+    border: 1px solid var(--pane-line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: #fff;
+  }
+
+  pre {
+    margin: 18px 0 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: #1B2036;
+    color: #DDE1F4;
+    font: 13.5px/1.6 var(--mono);
+  }
+
+  .foot {
+    padding: 56px 0 40px;
+    font-size: 14px;
+    color: var(--on-sky-soft);
+  }
+
+  .foot p { margin: 0 0 6px; }
+  .foot a { color: var(--on-sky); }
+
+  /* ---------- 작업 표시줄 ---------- */
+  .taskbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--taskbar-h);
+    padding: 0 10px;
+    background: var(--taskbar);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    font-family: var(--chrome);
+    font-size: 12px;
+    color: var(--on-sky);
+  }
+
+  .task {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--on-sky);
+    font: 12px var(--chrome);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .task:hover { background: rgba(255, 255, 255, 0.12); }
+
+  .task[aria-pressed="true"]::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 16px;
+    height: 3px;
+    margin-left: -8px;
+    border-radius: 2px;
+    background: var(--lamp);
+  }
+
+  .task svg { width: 16px; height: 16px; flex: none; }
+
+  .spacer { flex: 1; }
+
+  .task-dl { color: var(--lamp); }
+
+  .tray {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 8px;
+    text-align: right;
+    line-height: 1.35;
+  }
+
+  .tray svg { width: 16px; height: 16px; }
+
+  .clock { display: flex; flex-direction: column; }
+
+  /* ---------- 좁은 화면 ---------- */
+  @media (max-width: 860px) {
+    .hero {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 0;
+      padding-top: 48px;
+    }
+
+    .eyebrow { margin-bottom: 32px; }
+
+    h1 { font-size: clamp(34px, 10vw, 84px); }
+
+    .desk {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 48px;
+      padding-top: 40px;
+    }
+
+    .desk .features,
+    .desk .install,
+    .desk .how { grid-column: 1; margin-top: 0; }
+
+    .clock .date { display: none; }
+  }
+
+  @media (max-width: 420px) {
+    .task-dl { display: none; }
+    .btn { width: 100%; justify-content: center; }
+  }
+
+  .reduced .shake-only { display: none; }
+</style>
+</head>
+<body>
+<canvas id="snow" aria-hidden="true"></canvas>
+
+<main class="page">
+  <section class="hero" aria-labelledby="headline">
+    <div>
+      <p class="eyebrow">Snow Window · Windows 10/11용 무료 앱</p>
+      <h1 id="headline"><span data-snow>제 PC에</span><span data-snow>첫 눈이 내립니다</span></h1>
+      <p class="lede">바탕화면과 열어 둔 모든 창 위에 눈이 내리고, 창 윗변에 소복이 쌓여요. 창을 흔들면 털리고, 마우스로 쓸면 흩날립니다.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/jeiel85/snow-window/releases/latest/download/SnowWindow-win-x64.exe">Windows용 다운로드</a>
+        <a class="btn btn-ghost" href="https://github.com/jeiel85/snow-window">GitHub에서 소스 보기</a>
+      </div>
+      <p class="meta">v0.1.0 · 64비트 · 설치 없이 실행하는 exe 파일 하나 (약 50 MB)</p>
+    </div>
+
+    <div class="demo-slot" id="demo-slot">
+      <article class="win demo" id="demo" data-snow data-inset="6" aria-labelledby="demo-title">
+        <header class="titlebar" id="demo-bar">
+          <h2 class="title" id="demo-title">이 창을 흔들어 보세요</h2>
+          <div class="controls">
+            <button type="button" data-close aria-label="최소화 (쌓인 눈이 떨어집니다)">&#x2014;</button>
+            <button type="button" class="close" data-close aria-label="닫기 (쌓인 눈이 떨어집니다)">&#x2715;</button>
+          </div>
+        </header>
+        <div class="win-body">
+          <p>제목 표시줄을 잡고 좌우로 빠르게 흔들면 쌓인 눈이 떨어져요. 눈 더미를 마우스로 쓸면 흩날리고, 창을 닫으면 쌓인 눈이 한꺼번에 떨어집니다.</p>
+          <button type="button" class="btn-small shake-only" id="shake">창 흔들기</button>
+          <p class="note">이 페이지의 눈은 앱의 동작을 브라우저에서 따라 만든 데모예요. 실제 앱은 바탕화면 전체에 내립니다.</p>
+        </div>
+      </article>
+      <div class="demo-closed" role="status">
+        <p>창을 닫았더니 쌓여 있던 눈이 떨어졌어요.</p>
+        <button type="button" class="btn btn-ghost" data-reopen>창 다시 열기</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="desk" aria-label="앱 소개">
+    <article class="win features" data-snow data-inset="6" aria-labelledby="t-features">
+      <header class="titlebar"><h2 class="title" id="t-features">할 수 있는 것</h2></header>
+      <ul class="win-body list">
+        <li><b>창 윗변과 화면 아래에 쌓여요.</b> 다른 창에 가려진 부분에는 쌓이지 않아요.</li>
+        <li><b>창을 줄이면 넘친 눈이 떨어져요.</b> 빠르게 흔들면 털리고, 닫거나 최소화하면 우수수 떨어집니다.</li>
+        <li><b>마우스로 쓸면 흩날려요.</b> 떨어지는 눈송이도 커서를 비켜 갑니다.</li>
+        <li><b>작업을 방해하지 않아요.</b> 클릭과 키보드 입력은 눈을 그대로 통과합니다.</li>
+        <li><b>전체 화면에서는 쉬어요.</b> 영상이나 게임을 전체 화면으로 띄운 모니터에서는 눈이 멈춥니다.</li>
+        <li><b>눈의 양을 고를 수 있어요.</b> 조금, 보통, 펑펑 중에서 고르세요.</li>
+      </ul>
+    </article>
+
+    <article class="win install" data-snow data-inset="6" aria-labelledby="t-install">
+      <header class="titlebar"><h2 class="title" id="t-install">설치와 사용</h2></header>
+      <ol class="win-body steps">
+        <li><b>exe를 내려받아 실행하세요.</b> 설치 과정 없이 바로 켜지고, .NET을 따로 설치할 필요도 없어요.</li>
+        <li><b>"Windows의 PC 보호" 창이 뜨면</b> 추가 정보 → 실행을 누르세요. 코드 서명을 하지 않은 개인 프로젝트라 처음에 뜰 수 있어요.</li>
+        <li><b>알림 영역의 눈송이 아이콘</b>을 왼쪽 클릭하면 켜고 끄고, 오른쪽 클릭하면 눈의 양과 Windows 시작 시 실행 등을 고를 수 있어요.</li>
+      </ol>
+    </article>
+
+    <article class="win how" data-snow data-inset="6" aria-labelledby="t-how">
+      <header class="titlebar"><h2 class="title" id="t-how">만든 방식</h2></header>
+      <div class="win-body">
+        <p>C# .NET 10으로 만든 트레이 앱이에요. 모니터마다 클릭이 통과하는 투명한 창을 하나씩 띄우고, DirectComposition과 Direct2D로 눈송이를 그립니다. 쌓인 눈은 창마다 3픽셀 칸의 높이로 계산해서 무너지고 넘쳐요.</p>
+        <p>창 목록은 창이 움직이거나 바뀔 때만 다시 읽고 기본 30fps로 돌아서, 켜 둔 채로 일해도 가벼워요. 소스를 받아 직접 빌드할 수도 있습니다.</p>
+        <pre><code>dotnet build SnowWindow.sln -c Release
+dotnet test SnowWindow.sln</code></pre>
+      </div>
+    </article>
+  </section>
+
+  <footer class="foot">
+    <p>Snow Window는 개인 프로젝트예요. 버그나 아이디어는 <a href="https://github.com/jeiel85/snow-window/issues">GitHub 이슈</a>로 알려 주세요.</p>
+    <p><a href="https://github.com/jeiel85/snow-window">GitHub</a> · <a href="https://github.com/jeiel85/snow-window/releases">모든 릴리스</a> · <a href="https://www.threads.com/@beyondquestion">Threads @beyondquestion</a></p>
+  </footer>
+</main>
+
+<nav class="taskbar" aria-label="작업 표시줄">
+  <button type="button" class="task" id="task-demo" aria-pressed="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/><path d="M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/></g></svg>
+    데모 창
+  </button>
+  <span class="spacer"></span>
+  <a class="task task-dl" href="https://github.com/jeiel85/snow-window/releases/latest/download/SnowWindow-win-x64.exe">다운로드</a>
+  <span class="tray">
+    <svg viewBox="0 0 24 24" aria-label="Snow Window 실행 중" role="img"><circle cx="12" cy="12" r="11" fill="#1E2448"/><g stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"><path d="M12 4.5v15M5.5 8.2l13 7.6M5.5 15.8l13-7.6"/></g></svg>
+    <span class="clock"><time class="time" id="clock-time"></time><span class="date" id="clock-date"></span></span>
+  </span>
+</nav>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("snow");
+  const ctx = canvas.getContext("2d");
+  const reducedQuery = matchMedia("(prefers-reduced-motion: reduce)");
+  let reduced = reducedQuery.matches;
+  document.documentElement.classList.toggle("reduced", reduced);
+
+  // 앱과 같은 규칙: 3px 칸마다 높이를 갖는 눈 더미
+  const COL = 3;
+  const PILE_MAX = 12;
+  const GROUND_MAX = 16;
+  const STEP = 1.1;          // 이웃 칸과의 최대 높이 차 (넘으면 무너짐)
+  const EDGE_HOLD = COL * 1.3;
+  const DEBRIS_VOL = 6;
+  const MAX_PARTS = 1100;
+
+  let W = 0, H = 0, DPR = 1;
+  const parts = [];
+
+  // 눈송이 스프라이트: 흰 심 + 옅은 푸른 테 (밝은 배경에서도 보이게)
+  const sprite = document.createElement("canvas");
+  sprite.width = sprite.height = 32;
+  {
+    const g = sprite.getContext("2d");
+    const grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grd.addColorStop(0, "rgba(255,255,255,1)");
+    grd.addColorStop(0.38, "rgba(255,255,255,0.95)");
+    grd.addColorStop(0.62, "rgba(205,212,240,0.35)");
+    grd.addColorStop(1, "rgba(205,212,240,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 32, 32);
+  }
+
+  function noise(x, seed) {
+    return 0.5 + 0.25 * Math.sin(x * 1.7 + seed) + 0.25 * Math.sin(x * 0.63 + seed * 2.3);
+  }
+
+  class Pile {
+    constructor(max, seed) {
+      this.max = max;
+      this.seed = seed;
+      this.h = new Float32Array(0);
+      this.cap = new Float32Array(0);
+      this.left = 0;
+      this.top = 0;
+      this.acc = 0;
+    }
+
+    // 폭이 줄면 넘친 칸의 눈을 떨어뜨린다
+    setGeometry(left, top, width) {
+      const n = Math.max(1, Math.floor(width / COL));
+      if (n !== this.h.length) {
+        const old = this.h;
+        const h = new Float32Array(n);
+        const cap = new Float32Array(n);
+        for (let i = 0; i < n; i++) cap[i] = this.max * (0.8 + 0.2 * noise(i * 0.08, this.seed));
+        for (let i = 0; i < old.length; i++) {
+          if (i < n) h[i] = Math.min(old[i], cap[i]);
+          else if (old[i] > 0.4) spawnDebris(left + i * COL + COL / 2, top - old[i], old[i] * COL, 0, 0);
+        }
+        this.h = h;
+        this.cap = cap;
+      }
+      this.left = left;
+      this.top = top;
+    }
+
+    prefill(level) {
+      const { h, cap } = this;
+      for (let i = 0; i < h.length; i++) h[i] = cap[i] * (level + 0.3 * noise(i * 0.21, this.seed + 4));
+      for (let k = 0; k < 40; k++) this.relax();
+    }
+
+    deposit(x, vol) {
+      const { h, cap } = this;
+      const c = Math.floor((x - this.left) / COL);
+      const w = [0.1, 0.2, 0.4, 0.2, 0.1];
+      for (let k = -2; k <= 2; k++) {
+        const i = c + k;
+        if (i >= 0 && i < h.length) h[i] = Math.min(cap[i], h[i] + (vol * w[k + 2]) / COL);
+      }
+    }
+
+    relax() {
+      const { h, cap } = this;
+      const n = h.length;
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < n - 1; i++) {
+          const d = h[i] - h[i + 1];
+          if (d > STEP) { const m = (d - STEP) / 2; h[i] -= m; h[i + 1] += m; }
+          else if (d < -STEP) { const m = (-d - STEP) / 2; h[i] += m; h[i + 1] -= m; }
+        }
+      }
+      for (let i = 0; i < n; i++) if (h[i] > cap[i]) h[i] = cap[i];
+    }
+
+    // 가장자리에 너무 쌓인 눈은 흘러 떨어진다
+    spillEdges() {
+      const { h } = this;
+      const last = h.length - 1;
+      if (last < 2) return;
+      if (h[0] > EDGE_HOLD) { this.acc += (h[0] - EDGE_HOLD) * COL; h[0] = EDGE_HOLD; this.drop(this.left - 1, -25); }
+      if (h[last] > EDGE_HOLD) { this.acc += (h[last] - EDGE_HOLD) * COL; h[last] = EDGE_HOLD; this.drop(this.left + h.length * COL + 1, 25); }
+    }
+
+    drop(x, vx) {
+      if (this.acc >= DEBRIS_VOL) {
+        spawnDebris(x, this.top - EDGE_HOLD, this.acc, vx, 0);
+        this.acc = 0;
+      }
+    }
+
+    // 흔들림·스크롤에 털리는 눈
+    shed(frac, vx, vy, hidden) {
+      const { h } = this;
+      let acc = 0;
+      for (let i = 0; i < h.length; i++) {
+        if (h[i] < 0.6 || (hidden && hidden(i))) continue;
+        const take = h[i] * frac;
+        h[i] -= take;
+        acc += take * COL;
+        if (acc >= DEBRIS_VOL) {
+          spawnDebris(this.left + i * COL, this.top - h[i] - 1, acc, vx * 0.35, vy * 0.35 - 40);
+          acc = 0;
+        }
+      }
+    }
+
+    spillAll(hidden) {
+      this.shed(1, 0, 0, hidden);
+      this.h.fill(0);
+    }
+
+    melt(base, perHeight, dt) {
+      const { h } = this;
+      for (let i = 0; i < h.length; i++) if (h[i] > 0) h[i] = Math.max(0, h[i] - (base + perHeight * h[i]) * dt);
+    }
+  }
+
+  function spawnDebris(x, y, vol, vx, vy) {
+    while (vol > 0.5 && parts.length < MAX_PARTS) {
+      const v = Math.min(vol, DEBRIS_VOL);
+      vol -= v;
+      parts.push({
+        x: x + (Math.random() - 0.5) * 5, y,
+        vx: vx + (Math.random() - 0.5) * 70, vy: vy - Math.random() * 50,
+        r: 1.1 + Math.random() * 1.3, a: 0.95, depth: 1, debris: true, vol: v,
+        phase: 0, sway: 0, freq: 0, tvy: 0,
+      });
+    }
+  }
+
+  function spawnFlake(y) {
+    const depth = Math.random();
+    parts.push({
+      x: -40 + Math.random() * (W + 80), y,
+      vx: 0, vy: 30 + depth * 45,
+      r: 0.9 + depth * 2.4, a: 0.4 + depth * 0.6, depth, debris: false,
+      vol: 10 + depth * 20,
+      phase: Math.random() * Math.PI * 2,
+      sway: 6 + Math.random() * 14, freq: 0.6 + Math.random() * 1.1,
+      tvy: 28 + depth * 48,
+    });
+  }
+
+  // ---------- 눈이 쌓이는 요소 ----------
+  const demo = document.getElementById("demo");
+  const demoSlot = document.getElementById("demo-slot");
+  const taskDemo = document.getElementById("task-demo");
+
+  const holders = [...document.querySelectorAll("[data-snow]")].map((el, i) => ({
+    el,
+    inset: Number(el.dataset.inset || 0),
+    pile: new Pile(PILE_MAX, i * 7.3 + 1),
+    isDemo: el === demo,
+    rect: null,
+    prevLeft: null, prevTop: null,
+    vx: 0, vy: 0,       // 빠르게 따라가는 속도 (끌기·흔들기)
+    svx: 0, svy: 0,     // 느리게 따라가는 속도 (스크롤: 휠 한 칸에 털리지 않게)
+    hidden: false,
+  }));
+  const demoHolder = holders.find((h) => h.isDemo);
+  const ground = new Pile(GROUND_MAX, 99);
+
+  let demoRect = null;
+  function coveredByDemo(holder) {
+    if (holder.isDemo || demoHolder.hidden || !demoRect) return null;
+    const p = holder.pile;
+    const top = p.top - PILE_MAX - 2;
+    const bottom = p.top + 1;
+    if (demoRect.bottom < top || demoRect.top > bottom) return null;
+    const a = demoRect.left, b = demoRect.right;
+    return (i) => {
+      const x = p.left + i * COL + COL / 2;
+      return x >= a && x <= b;
+    };
+  }
+
+  function measure(dt) {
+    demoRect = demoHolder.hidden ? null : demo.getBoundingClientRect();
+    for (const h of holders) {
+      const r = h.isDemo ? demoRect : h.el.getBoundingClientRect();
+      if (!r) continue;
+      h.rect = r;
+      const left = r.left + h.inset;
+      const top = r.top;
+      if (h.prevLeft !== null && dt > 0) {
+        const rx = (left - h.prevLeft) / dt, ry = (top - h.prevTop) / dt;
+        const fast = Math.min(1, dt * 30), slow = Math.min(1, dt * 8);
+        h.vx += (rx - h.vx) * fast;
+        h.vy += (ry - h.vy) * fast;
+        h.svx += (rx - h.svx) * slow;
+        h.svy += (ry - h.svy) * slow;
+      }
+      h.prevLeft = left;
+      h.prevTop = top;
+      h.pile.setGeometry(left, top, r.width - h.inset * 2);
+    }
+    ground.setGeometry(0, H - taskbarHeight(), W);
+  }
+
+  let taskbarH = 48;
+  function taskbarHeight() { return taskbarH; }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    taskbarH = document.querySelector(".taskbar").getBoundingClientRect().height;
+    // 레이아웃이 바뀌어 창이 옮겨진 것은 흔든 것이 아니다
+    for (const h of holders) { h.prevLeft = null; h.vx = h.vy = h.svx = h.svy = 0; }
+    requestDraw();
+  }
+
+  // ---------- 마우스 ----------
+  const pointer = { x: -1e4, y: -1e4, vx: 0, vy: 0, t: 0, active: false };
+  addEventListener("pointermove", (e) => {
+    const now = performance.now() / 1000;
+    const dt = Math.max(0.008, now - pointer.t);
+    if (pointer.active) {
+      pointer.vx += ((e.clientX - pointer.x) / dt - pointer.vx) * 0.5;
+      pointer.vy += ((e.clientY - pointer.y) / dt - pointer.vy) * 0.5;
+    }
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+    pointer.t = now;
+    pointer.active = true;
+  }, { passive: true });
+  addEventListener("pointerleave", () => { pointer.active = false; });
+
+  function kickPiles(list) {
+    const speed = Math.hypot(pointer.vx, pointer.vy);
+    if (!pointer.active || speed < 60) return;
+    const R = 22;
+    for (const { pile, hidden } of list) {
+      const { h } = pile;
+      if (Math.abs(pointer.y - pile.top) > R + PILE_MAX) continue;
+      const c0 = Math.max(0, Math.floor((pointer.x - R - pile.left) / COL));
+      const c1 = Math.min(h.length - 1, Math.floor((pointer.x + R - pile.left) / COL));
+      let acc = 0;
+      for (let i = c0; i <= c1; i++) {
+        if (h[i] < 0.3 || (hidden && hidden(i))) continue;
+        const x = pile.left + i * COL + COL / 2;
+        const y = pile.top - h[i] / 2;
+        const d = Math.hypot(x - pointer.x, y - pointer.y);
+        if (d > R) continue;
+        const take = h[i] * Math.min(1, speed / 900) * 0.6 * (1 - d / R);
+        h[i] -= take;
+        acc += take * COL;
+        if (acc >= DEBRIS_VOL) {
+          spawnDebris(x, pile.top - h[i] - 2, acc, pointer.vx * 0.35, pointer.vy * 0.35 - 90);
+          acc = 0;
+        }
+      }
+    }
+  }
+
+  // ---------- 데모 창 끌기·흔들기·닫기 ----------
+  const bar = document.getElementById("demo-bar");
+  const off = { x: 0, y: 0 };
+  let drag = null;
+  let shakeT = -1;
+
+  function applyOffset() {
+    demo.style.transform = off.x || off.y ? `translate(${off.x}px, ${off.y}px)` : "";
+  }
+
+  function clampOffset() {
+    const r = demo.getBoundingClientRect();
+    const baseLeft = r.left - off.x;
+    const baseTop = r.top - off.y;
+    const minX = -baseLeft - r.width + 120, maxX = W - baseLeft - 120;
+    const minY = -baseTop, maxY = H - taskbarHeight() - baseTop - 40;
+    off.x = Math.min(maxX, Math.max(minX, off.x));
+    off.y = Math.min(maxY, Math.max(minY, off.y));
+  }
+
+  bar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    drag = { id: e.pointerId, sx: e.clientX - off.x, sy: e.clientY - off.y };
+    bar.setPointerCapture(e.pointerId);
+    demo.classList.add("dragging");
+  });
+  bar.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    off.x = e.clientX - drag.sx;
+    off.y = e.clientY - drag.sy;
+    clampOffset();
+    applyOffset();
+    requestDraw();
+  });
+  const endDrag = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag = null;
+    demo.classList.remove("dragging");
+  };
+  bar.addEventListener("pointerup", endDrag);
+  bar.addEventListener("pointercancel", endDrag);
+
+  document.getElementById("shake").addEventListener("click", () => { shakeT = 0; });
+
+  function closeDemo() {
+    if (demoHolder.hidden) return;
+    demoHolder.pile.spillAll(null);
+    demoHolder.hidden = true;
+    demoSlot.classList.add("closed");
+    taskDemo.setAttribute("aria-pressed", "false");
+    demoSlot.querySelector("[data-reopen]").focus();
+    requestDraw();
+  }
+
+  function openDemo() {
+    if (!demoHolder.hidden) return;
+    off.x = off.y = 0;
+    applyOffset();
+    demoHolder.hidden = false;
+    demoHolder.prevLeft = null;
+    demoHolder.vx = demoHolder.vy = demoHolder.svx = demoHolder.svy = 0;
+    demoSlot.classList.remove("closed");
+    taskDemo.setAttribute("aria-pressed", "true");
+    requestDraw();
+  }
+
+  demo.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeDemo));
+  demoSlot.querySelector("[data-reopen]").addEventListener("click", () => { openDemo(); demo.querySelector("#shake").focus(); });
+  taskDemo.addEventListener("click", () => (demoHolder.hidden ? openDemo() : closeDemo()));
+
+  // ---------- 시뮬레이션 ----------
+  let spawnAcc = 0;
+
+  function step(dt) {
+    if (window.innerWidth !== W || window.innerHeight !== H) resize();
+    if (shakeT >= 0) {
+      shakeT += dt;
+      const env = Math.max(0, 1 - shakeT / 0.8);
+      off.x = Math.sin(shakeT * Math.PI * 2 * 7.5) * 30 * env;
+      applyOffset();
+      if (shakeT > 0.8) { shakeT = -1; off.x = 0; applyOffset(); }
+    }
+
+    measure(dt);
+
+    const active = [];
+    for (const h of holders) {
+      if (h.hidden || !h.rect) continue;
+      if (h.pile.top < -40 || h.pile.top > H - taskbarHeight() + 2) continue;
+      active.push({ holder: h, pile: h.pile, hidden: coveredByDemo(h) });
+    }
+
+    // 창이 빠르게 움직이면 (흔들기·빠른 스크롤) 쌓인 눈이 털린다
+    for (const a of active) {
+      const h = a.holder;
+      const moving = h.isDemo && (drag || shakeT >= 0);
+      const speed = moving ? Math.hypot(h.vx, h.vy) : Math.hypot(h.svx, h.svy);
+      const limit = moving ? 450 : 2200;
+      if (speed > limit) {
+        const frac = Math.min(0.5, ((speed - limit) / limit) * 0.6) * Math.min(1, dt * 30);
+        h.pile.shed(frac, h.vx, h.vy, a.hidden);
+      }
+    }
+
+    // 새 눈송이
+    spawnAcc += dt * W * 0.016;
+    while (spawnAcc >= 1) { spawnAcc -= 1; if (parts.length < MAX_PARTS) spawnFlake(-10); }
+
+    const groundTop = H - taskbarHeight();
+    const pSpeed = Math.hypot(pointer.vx, pointer.vy);
+    pointer.vx *= Math.max(0, 1 - dt * 6);
+    pointer.vy *= Math.max(0, 1 - dt * 6);
+
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      if (p.debris) {
+        p.vy = Math.min(420, p.vy + 620 * dt);
+        p.vx *= Math.max(0, 1 - 1.6 * dt);
+      } else {
+        p.vy += (p.tvy - p.vy) * Math.min(1, 2 * dt);
+        p.vx *= Math.max(0, 1 - 0.9 * dt);
+        p.phase += p.freq * dt;
+      }
+
+      // 커서 바람
+      if (pointer.active && pSpeed > 40) {
+        const dx = p.x - pointer.x, dy = p.y - pointer.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 6400) {
+          const f = (1 - Math.sqrt(d2) / 80) * dt * 2.2;
+          p.vx += pointer.vx * f;
+          p.vy += pointer.vy * f * 0.6;
+        }
+      }
+
+      const sway = p.debris ? 0 : Math.cos(p.phase) * p.sway * p.freq;
+      const prevY = p.y;
+      p.x += (p.vx + sway) * dt;
+      p.y += p.vy * dt;
+
+      let landed = false;
+      if (p.vy > 0) {
+        for (const a of active) {
+          const pile = a.pile;
+          const c = Math.floor((p.x - pile.left) / COL);
+          if (c < 0 || c >= pile.h.length || (a.hidden && a.hidden(c))) continue;
+          const surface = pile.top - pile.h[c];
+          if (prevY <= surface && p.y >= surface) {
+            const chance = p.debris ? 0.8 : p.depth < 0.25 ? 0 : 0.15 + 0.7 * p.depth;
+            if (Math.random() < chance) { pile.deposit(p.x, p.vol); landed = true; break; }
+          }
+        }
+        if (!landed && p.y >= groundTop - ground.h[Math.max(0, Math.min(ground.h.length - 1, Math.floor(p.x / COL)))]) {
+          if (p.x >= 0 && p.x < W) ground.deposit(p.x, p.vol * 0.6);
+          landed = true;
+        }
+      }
+
+      if (landed || p.x < -80 || p.x > W + 80 || p.y < -200) {
+        parts[i] = parts[parts.length - 1];
+        parts.pop();
+      }
+    }
+
+    kickPiles(active.concat([{ pile: ground, hidden: null }]));
+
+    for (const a of active) {
+      a.pile.relax();
+      a.pile.spillEdges();
+      a.pile.melt(0.004, 0.002, dt);
+    }
+    ground.relax();
+    ground.melt(0.02, 0.012, dt);
+
+    return active;
+  }
+
+  // ---------- 그리기 ----------
+  function drawPile(pile, hidden, maxH) {
+    const { h, left, top } = pile;
+    const n = h.length;
+    const grad = ctx.createLinearGradient(0, top - maxH, 0, top);
+    grad.addColorStop(0, "#FFFFFF");
+    grad.addColorStop(1, "#DDE2F3");
+
+    const runs = [];
+    let i = 0;
+    while (i < n) {
+      while (i < n && (h[i] < 0.35 || (hidden && hidden(i)))) i++;
+      const s = i;
+      while (i < n && h[i] >= 0.35 && !(hidden && hidden(i))) i++;
+      if (i > s) runs.push([s, i - 1]);
+    }
+    if (!runs.length) return;
+
+    const path = new Path2D();
+    for (const [s, e] of runs) {
+      path.moveTo(left + s * COL, top + 1);
+      for (let k = s; k <= e; k++) {
+        const a = h[Math.max(s, k - 1)], b = h[k], c = h[Math.min(e, k + 1)];
+        path.lineTo(left + k * COL + COL / 2, top - (a + 2 * b + c) / 4);
+      }
+      path.lineTo(left + (e + 1) * COL, top + 1);
+      path.closePath();
+    }
+
+    ctx.save();
+    ctx.translate(0, -1);
+    ctx.fillStyle = "rgba(150,160,205,0.55)";
+    ctx.fill(path);
+    ctx.restore();
+    ctx.fillStyle = grad;
+    ctx.fill(path);
+  }
+
+  function draw(active) {
+    ctx.clearRect(0, 0, W, H);
+    for (const a of active) drawPile(a.pile, a.hidden, PILE_MAX);
+    drawPile(ground, null, GROUND_MAX);
+
+    for (const p of parts) {
+      const d = p.r * 2 * 1.5;
+      ctx.globalAlpha = p.a;
+      ctx.drawImage(sprite, p.x - d / 2, p.y - d / 2, d, d);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- 루프 ----------
+  let last = 0;
+  let running = false;
+  let drawQueued = false;
+
+  function frame(t) {
+    const now = t / 1000;
+    const dt = last ? Math.min(0.05, now - last) : 0;
+    last = now;
+    if (reduced) {
+      drawQueued = false;
+      measure(0);
+      const active = holders
+        .filter((h) => !h.hidden && h.rect)
+        .map((h) => ({ holder: h, pile: h.pile, hidden: coveredByDemo(h) }));
+      draw(active);
+      return;
+    }
+    draw(step(dt));
+    if (running) requestAnimationFrame(frame);
+  }
+
+  function requestDraw() {
+    if (!reduced || drawQueued) return;
+    drawQueued = true;
+    requestAnimationFrame(frame);
+  }
+
+  function start() {
+    if (reduced) { running = false; requestDraw(); return; }
+    if (running) return;
+    running = true;
+    last = 0;
+    requestAnimationFrame(frame);
+  }
+
+  function stop() { running = false; }
+
+  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
+  addEventListener("resize", resize);
+  addEventListener("scroll", requestDraw, { passive: true });
+  reducedQuery.addEventListener("change", (e) => {
+    reduced = e.matches;
+    document.documentElement.classList.toggle("reduced", reduced);
+    if (reduced) { stop(); parts.length = 0; requestDraw(); } else start();
+  });
+
+  // 처음부터 눈이 조금 쌓여 있게
+  function init() {
+    resize();
+    measure(0);
+    for (const h of holders) h.pile.prefill(0.45);
+    ground.prefill(0.5);
+    if (!reduced) for (let k = 0; k < W * 0.17; k++) spawnFlake(Math.random() * H);
+    start();
+  }
+
+  // ---------- 작업 표시줄 시계 ----------
+  const clockTime = document.getElementById("clock-time");
+  const clockDate = document.getElementById("clock-date");
+  function tick() {
+    const d = new Date();
+    clockTime.textContent = d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+    clockDate.textContent = d.toLocaleDateString("ko-KR");
+  }
+  tick();
+  setInterval(tick, 15000);
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(init, init);
+  else init();
+})();
+</script>
+</body>
+</html>

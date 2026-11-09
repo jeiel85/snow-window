@@ -2,6 +2,10 @@
 
 A Windows tray app that makes snow fall across the desktop and every window, and pile up on window top edges.
 
+**[Download (Windows 10/11, 64-bit)](https://github.com/jeiel85/snow-window/releases/latest/download/SnowWindow-win-x64.exe)** · [Landing page](https://jeiel85.github.io/snow-window/) · [All releases](https://github.com/jeiel85/snow-window/releases)
+
+Just run the downloaded exe — no installer and no .NET runtime needed. The exe is not code-signed, so on first launch Windows may show "Windows protected your PC"; click **More info → Run anyway**.
+
 - Snow falls across every monitor (over the top of windows)
 - **It piles up on window top edges** and at the bottom of the screen (just above the taskbar). Parts hidden behind another window don't collect snow.
 - Shrinking a window spills the overflowing snow off the edge, and shaking a window fast knocks the snow off. When a window is closed or minimized, its snow falls down.
@@ -36,7 +40,15 @@ dotnet test SnowWindow.sln
 
 Executable: `src/SnowWindow/bin/Release/net10.0-windows/win-x64/SnowWindow.exe`
 
-For a single executable: `dotnet publish src/SnowWindow -c Release` (requires the .NET 10 desktop runtime)
+Release build (single self-contained exe, about 50 MB):
+
+```bash
+dotnet publish src/SnowWindow -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+```
+
+Upload `publish/SnowWindow.exe` to the release as `SnowWindow-win-x64.exe` — the download links on the landing page and in this README point to that asset name.
+
+The landing page is the single file `docs/index.html`, served by GitHub Pages from the `/docs` folder on `main`.
 
 ## Diagnostics
 
