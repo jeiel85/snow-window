@@ -79,6 +79,65 @@ public class WeatherTests
         Assert.Equal("현재 위치", Weather.ParseLocation("""{ "latitude": 37.4, "longitude": 127.1 }""")!.Name);
     }
 
+    private const string First = "https://first.example/json";
+    private const string Second = "https://second.example/json";
+    private const string BusanJson = """{ "city": "Busan", "latitude": 35.18, "longitude": 129.08 }""";
+
+    [Fact]
+    public async Task Stalled_provider_times_out_and_the_fallback_is_used()
+    {
+        var asked = new List<string>();
+        Task<string> Get(string url, CancellationToken token)
+        {
+            asked.Add(url);
+            return url == First
+                ? Task.Delay(Timeout.Infinite, token).ContinueWith(_ => "", token) // 답하지 않는 서비스
+                : Task.FromResult(BusanJson);
+        }
+
+        var location = await Weather.LocateAsync([First, Second], Get, TimeSpan.FromMilliseconds(100), CancellationToken.None);
+
+        Assert.Equal("Busan", location.Name);
+        Assert.Equal([First, Second], asked);
+    }
+
+    [Fact]
+    public async Task Error_response_moves_on_to_the_fallback()
+    {
+        Task<string> Get(string url, CancellationToken token) =>
+            Task.FromResult(url == First ? """{ "error": true, "reason": "RateLimited" }""" : BusanJson);
+
+        var location = await Weather.LocateAsync([First, Second], Get, TimeSpan.FromSeconds(5), CancellationToken.None);
+        Assert.Equal("Busan", location.Name);
+    }
+
+    [Fact]
+    public async Task Caller_cancellation_stops_without_trying_the_fallback()
+    {
+        using var cts = new CancellationTokenSource();
+        var asked = new List<string>();
+        Task<string> Get(string url, CancellationToken token)
+        {
+            asked.Add(url);
+            cts.Cancel();
+            return Task.FromCanceled<string>(token);
+        }
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => Weather.LocateAsync([First, Second], Get, TimeSpan.FromSeconds(5), cts.Token));
+        Assert.Equal([First], asked);
+    }
+
+    [Fact]
+    public async Task All_providers_failing_reports_the_last_reason()
+    {
+        Task<string> Get(string url, CancellationToken token) => throw new HttpRequestException($"{url} unreachable");
+
+        var ex = await Assert.ThrowsAsync<InvalidDataException>(
+            () => Weather.LocateAsync([First, Second], Get, TimeSpan.FromSeconds(5), CancellationToken.None));
+        Assert.Contains("second.example", ex.InnerException!.Message);
+    }
+
     [Fact]
     public void Reads_current_weather_from_open_meteo()
     {

@@ -91,20 +91,40 @@ internal static class Weather
         return new CurrentWeather(wmo, snowfall);
     }
 
-    public static async Task<GeoLocation> LocateAsync(CancellationToken ct)
+    /// <summary>위치 조회 서비스 하나에 주는 시간. 한 곳이 멈춰도 다음 서비스를 시도할 시간이 남도록 짧게 둔다.</summary>
+    public static readonly TimeSpan LocationProviderTimeout = TimeSpan.FromSeconds(8);
+
+    public static Task<GeoLocation> LocateAsync(CancellationToken ct) =>
+        LocateAsync(LocationProviders, (url, token) => Net.Client.GetStringAsync(url, token), LocationProviderTimeout, ct);
+
+    /// <summary>
+    /// 위치 조회 서비스를 차례로 시도한다. 한 서비스가 오류를 내거나 <paramref name="providerTimeout"/> 안에 답하지 않으면
+    /// 다음 서비스로 넘어간다. 호출한 쪽이 취소하면 바로 멈춘다.
+    /// </summary>
+    internal static async Task<GeoLocation> LocateAsync(
+        IReadOnlyList<string> providers,
+        Func<string, CancellationToken, Task<string>> getString,
+        TimeSpan providerTimeout,
+        CancellationToken ct)
     {
         Exception? last = null;
-        foreach (string url in LocationProviders)
+        foreach (string url in providers)
         {
+            using var attempt = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            attempt.CancelAfter(providerTimeout);
             try
             {
-                string json = await Net.Client.GetStringAsync(url, ct).ConfigureAwait(false);
+                string json = await getString(url, attempt.Token).ConfigureAwait(false);
                 if (ParseLocation(json) is { } location)
                 {
                     return location;
                 }
 
                 last = new InvalidDataException($"{new Uri(url).Host}가 위치를 알려 주지 않았습니다.");
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                last = new TimeoutException($"{new Uri(url).Host}가 {providerTimeout.TotalSeconds:0}초 안에 답하지 않았습니다.");
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException)
             {

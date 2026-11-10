@@ -61,7 +61,8 @@ internal sealed class WeatherWatcher : IDisposable
         WeatherState state;
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            // 위치 서비스 두 곳(각 8초)을 모두 기다리고도 날씨를 받을 시간이 남게 잡는다.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             if (_location is null || DateTime.UtcNow - _locatedAt > LocationMaxAge)
             {
                 _location = await Weather.LocateAsync(cts.Token);
