@@ -26,10 +26,33 @@ Right-click the snowflake icon in the notification area to open the menu. Left-c
 | Scatter snow with mouse (마우스로 눈 흩날리기) | Turn mouse interaction on/off |
 | Smooth motion (부드러운 움직임, 60fps) | Default is 30fps. 60fps is smoother but roughly doubles the CPU and GPU load |
 | Clear piled snow (쌓인 눈 치우기) | Removes all piled snow |
+| Snow only when it snows outside (밖에 눈 올 때만 내리기) | Weather mode. Checks the local weather every 15 minutes and snows only while it is snowing outside, as much as outside (light / moderate / heavy). While it is on, Snow and Snow amount are greyed out, and left-clicking the icon shows the current weather |
+| Install update (업데이트 설치) | Appears at the top of the menu when a newer release is on GitHub. Downloads, verifies and swaps in the new exe, then restarts |
+| Update → Check now / Check automatically (업데이트 → 지금 확인 / 자동으로 확인) | Checks GitHub for a newer release now / once a day (on by default) |
 | Run at Windows startup (Windows 시작 시 실행) | Registers/unregisters `HKCU\...\Run`. While it is on, each launch points the entry at the exe you just ran, so moving or replacing the exe keeps it working |
 | Open log folder (로그 폴더 열기) | `%LOCALAPPDATA%\SnowWindow` |
 
 Settings are saved in `%APPDATA%\SnowWindow\settings.json`.
+
+## Updates
+
+About a minute after launch and then once a day, Snow Window reads the latest release of this repository from the GitHub API. When a newer version exists it shows a notification and an **Install update** item at the top of the tray menu. Nothing is installed until you click it. Installing:
+
+1. downloads `SnowWindow-win-x64.exe` next to the running exe (`SnowWindow.exe.download`),
+2. checks its size, its SHA-256 against the digest GitHub publishes for the asset, and its file version against the release tag,
+3. renames the running exe to `SnowWindow.exe.old`, moves the new one into place and restarts (the `.old` file is deleted on the next check).
+
+If the exe sits in a folder you cannot write to, or you run a development build, it opens the release page instead. Notifications that have moved to the Windows notification center can't be clicked through to the app, so use the tray menu item.
+
+## Network and privacy
+
+| When | Where | What is sent |
+|---|---|---|
+| Update check (daily, can be turned off) | `api.github.com`, `github.com` | Your IP address and `User-Agent: SnowWindow/<version>` |
+| Weather mode, location (when turned on, then daily) | `ipapi.co` (fallback `ipwho.is`) | Your IP address, to look up an approximate city |
+| Weather mode, weather (every 15 minutes) | `api.open-meteo.com` | Latitude/longitude rounded to 2 decimals (~1 km) |
+
+Nothing else leaves your PC. Weather data by [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0).
 
 ## Build and run
 

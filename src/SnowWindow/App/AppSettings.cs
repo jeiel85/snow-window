@@ -25,6 +25,12 @@ internal sealed class AppSettings
     /// <summary>true면 60fps로 더 부드럽지만 CPU·GPU를 두 배 쓴다. 기본은 30fps.</summary>
     public bool SmoothMotion { get; set; }
 
+    /// <summary>true면 하루에 한 번 GitHub에서 새 버전을 확인하고 알린다(설치는 사용자가 누를 때만).</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>true면 밖의 날씨를 15분마다 확인해, 눈이 올 때만 그 양만큼 내린다(눈 내리기·눈의 양 설정보다 우선).</summary>
+    public bool FollowWeather { get; set; }
+
     /// <summary>설정 파일이 없거나 읽을 수 없으면 기본값을 쓴다(읽기 실패는 로그에 남긴다).</summary>
     public static AppSettings Load()
     {

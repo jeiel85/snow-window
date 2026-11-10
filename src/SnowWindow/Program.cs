@@ -22,8 +22,10 @@ internal static class Program
             return 0;
         }
 
+        // 업데이트 직후 실행된 경우에는 이전 버전이 종료하며 뮤텍스를 놓을 때까지 기다린다.
+        bool afterUpdate = args.Contains(Updater.AfterUpdateArg);
         using var mutex = new Mutex(initiallyOwned: true, MutexName, out bool createdNew);
-        if (!createdNew)
+        if (!createdNew && !(afterUpdate && WaitForPreviousInstance(mutex)))
         {
             MessageBox.Show("Snow Window가 이미 실행 중입니다.\n작업 표시줄 알림 영역의 눈송이 아이콘을 확인하세요.",
                 "Snow Window", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -37,8 +39,22 @@ internal static class Program
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             Log.Error("처리되지 않은 예외로 종료합니다", e.ExceptionObject as Exception);
 
-        Log.Info($"시작 v{typeof(Program).Assembly.GetName().Version} ({Environment.ProcessPath})");
-        Application.Run(new TrayApp());
+        Log.Info($"시작 v{typeof(Program).Assembly.GetName().Version} ({Environment.ProcessPath}){(afterUpdate ? " — 업데이트 직후" : "")}");
+        Application.Run(new TrayApp(afterUpdate));
+        mutex.ReleaseMutex();
         return 0;
+    }
+
+    private static bool WaitForPreviousInstance(Mutex mutex)
+    {
+        try
+        {
+            return mutex.WaitOne(TimeSpan.FromSeconds(20));
+        }
+        catch (AbandonedMutexException)
+        {
+            // 이전 프로세스가 뮤텍스를 놓지 않고 끝났다. 소유권은 이쪽으로 넘어왔다.
+            return true;
+        }
     }
 }
