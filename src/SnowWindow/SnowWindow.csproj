@@ -11,7 +11,7 @@
     <ApplicationIcon>Assets\snow.ico</ApplicationIcon>
     <AssemblyName>SnowWindow</AssemblyName>
     <RootNamespace>SnowWindow</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Product>Snow Window</Product>
     <Description>Windows 바탕화면과 창 위에 눈을 내리고 쌓이게 하는 트레이 앱</Description>
     <PublishSingleFile>true</PublishSingleFile>
