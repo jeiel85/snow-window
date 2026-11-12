@@ -25,6 +25,7 @@ internal static class Native
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOACTIVATE = 0x0010;
+    public const uint SWP_SHOWWINDOW = 0x0040;
     public const uint SWP_NOOWNERZORDER = 0x0200;
 
     public const uint LWA_ALPHA = 0x2;
@@ -32,6 +33,13 @@ internal static class Native
     public const uint PM_REMOVE = 0x1;
     public const uint WM_NCHITTEST = 0x0084;
     public const nint HTTRANSPARENT = -1;
+    public const uint WM_MOUSEACTIVATE = 0x0021;
+    public const uint WM_LBUTTONDOWN = 0x0201;
+    public const uint WM_LBUTTONUP = 0x0202;
+    public const uint WM_CAPTURECHANGED = 0x0215;
+    public const nint MA_NOACTIVATE = 3;
+    public const int IDC_HAND = 32649;
+    public const int WHITE_BRUSH = 0;
 
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
     public const int DWMWA_CLOAKED = 14;
@@ -223,6 +231,30 @@ internal static class Native
 
     [DllImport("user32.dll")]
     public static extern nint DefWindowProcW(nint hwnd, uint msg, nint wParam, nint lParam);
+
+    [DllImport("user32.dll")]
+    public static extern nint SetCapture(nint hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    public static extern nint LoadCursorW(nint instance, nint cursorName);
+
+    /// <summary>성공하면 영역의 소유권이 시스템으로 넘어간다(지우면 안 된다).</summary>
+    [DllImport("user32.dll")]
+    public static extern int SetWindowRgn(nint hwnd, nint region, [MarshalAs(UnmanagedType.Bool)] bool redraw);
+
+    [DllImport("gdi32.dll")]
+    public static extern nint CreateEllipticRgn(int left, int top, int right, int bottom);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeleteObject(nint obj);
+
+    [DllImport("gdi32.dll")]
+    public static extern nint GetStockObject(int obj);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

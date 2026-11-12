@@ -58,7 +58,7 @@ internal sealed class TrayApp : ApplicationContext
             _intensityMenu.DropDownItems.Add(item);
         }
 
-        _mouseItem = new ToolStripMenuItem("마우스로 눈 흩날리기", null, (_, _) => SetMouseInteraction(!_settings.MouseInteraction));
+        _mouseItem = new ToolStripMenuItem("마우스로 눈 흩날리기·뭉치기", null, (_, _) => SetMouseInteraction(!_settings.MouseInteraction));
         _smoothItem = new ToolStripMenuItem("부드러운 움직임 (60fps, 더 무거움)", null, (_, _) => SetSmoothMotion(!_settings.SmoothMotion));
         var clearItem = new ToolStripMenuItem("쌓인 눈 치우기", null, (_, _) => _engine!.ClearSnow());
         _startupItem = new ToolStripMenuItem("Windows 시작 시 실행", null, (_, _) => ToggleStartup());

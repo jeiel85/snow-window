@@ -28,9 +28,9 @@ public struct Particle
 
 /// <summary>
 /// 눈 시뮬레이션. Win32에 의존하지 않으며, 모든 좌표는 가상 화면의 물리 픽셀이다.
-/// 창 목록·커서는 매 프레임 호출자가 넘겨준다.
+/// 창 목록·커서는 매 프레임 호출자가 넘겨준다. 눈덩이·눈사람은 SnowSimulation.Snowballs.cs.
 /// </summary>
-public sealed class SnowSimulation
+public sealed partial class SnowSimulation
 {
     public const int MaxParticles = 12000;
 
@@ -60,7 +60,9 @@ public sealed class SnowSimulation
     private float _cy;
     private float _cvx;
     private float _cvy;
+    private float _moved; // 이번 프레임에 커서가 움직인 거리(px)
     private bool _cursorValid;
+    private bool _mouseInteraction = true;
 
     public SnowSimulation(int seed)
     {
@@ -69,7 +71,19 @@ public sealed class SnowSimulation
 
     public SnowIntensity Intensity { get; set; } = SnowIntensity.Normal;
 
-    public bool MouseInteraction { get; set; } = true;
+    /// <summary>커서로 쌓인 눈을 흩날리고, 문질러 뭉치고, 눈덩이를 잡아 옮기는 기능 전체.</summary>
+    public bool MouseInteraction
+    {
+        get => _mouseInteraction;
+        set
+        {
+            _mouseInteraction = value;
+            if (!value)
+            {
+                ReleaseGrab();
+            }
+        }
+    }
 
     public ReadOnlySpan<Particle> Particles => _p.AsSpan(0, _count);
 
@@ -116,6 +130,7 @@ public sealed class SnowSimulation
         _windowPiles.Clear();
         _windowOrder.Clear();
         _count = 0;
+        ClearSnowballs();
 
         foreach (var m in monitors)
         {
@@ -144,6 +159,7 @@ public sealed class SnowSimulation
         _count = 0;
         _windowPiles.Clear();
         _windowOrder.Clear();
+        ClearSnowballs();
         foreach (var m in _monitors)
         {
             Array.Clear(m.Ground.H);
@@ -152,9 +168,10 @@ public sealed class SnowSimulation
         }
     }
 
-    /// <summary>쌓인 눈과 튀어나온 파편만 지운다(내리는 눈은 유지).</summary>
+    /// <summary>쌓인 눈·눈덩이와 튀어나온 파편만 지운다(내리는 눈은 유지).</summary>
     public void ClearPiles()
     {
+        ClearSnowballs();
         foreach (var pile in _windowPiles.Values)
         {
             Array.Clear(pile.H);
@@ -216,10 +233,18 @@ public sealed class SnowSimulation
         Spawn(dt);
         StepParticles(dt);
         StepPiles(dt);
-        if (MouseInteraction && _cursorValid)
+        _gatherPile = null;
+        if (MouseInteraction && _cursorValid && _carried == null)
         {
+            Gather(dt);
             KickPiles(dt);
         }
+        else
+        {
+            ResetRub();
+        }
+
+        StepSnowballs(dt);
     }
 
     internal void InjectParticle(Particle particle)
@@ -234,15 +259,18 @@ public sealed class SnowSimulation
 
     private void UpdateCursor(CursorSample cursor, float dt)
     {
+        _moved = 0f;
         if (!cursor.Valid)
         {
             _cursorValid = false;
             _cvx = _cvy = 0;
+            ReleaseGrab(); // 보안 데스크톱 등으로 커서를 놓쳤다
             return;
         }
 
         if (_cursorValid)
         {
+            _moved = MathF.Sqrt((cursor.X - _cx) * (cursor.X - _cx) + (cursor.Y - _cy) * (cursor.Y - _cy));
             float vx = (cursor.X - _cx) / dt;
             float vy = (cursor.Y - _cy) / dt;
             float sp = MathF.Sqrt(vx * vx + vy * vy);
@@ -297,7 +325,7 @@ public sealed class SnowSimulation
                     SpillAll(pile); // 배율이 다른 모니터로 옮겨 갔다
                 }
 
-                pile = new Pile(left, w.Bounds.Top, cols, colW, WindowPileMax * scale, scale, isGround: false);
+                pile = new Pile(left, w.Bounds.Top, cols, colW, WindowPileMax * scale, scale, isGround: false) { Handle = w.Handle };
                 _windowPiles[w.Handle] = pile;
             }
             else
@@ -336,6 +364,7 @@ public sealed class SnowSimulation
 
     private void ApplyWindowChange(Pile pile, float left, float top, int cols, float dt)
     {
+        pile.MoveX = pile.MoveSpeed = pile.MoveVX = pile.MoveVY = 0f;
         float dx = left - pile.Left;
         float dy = top - pile.BaseY;
         if (cols == pile.Columns)
@@ -352,6 +381,10 @@ public sealed class SnowSimulation
             float vx = dx / dt;
             float vy = dy / dt;
             float speed = MathF.Sqrt(vx * vx + vy * vy);
+            pile.MoveX = dx;
+            pile.MoveSpeed = speed;
+            pile.MoveVX = vx;
+            pile.MoveVY = vy;
             float threshold = 220f * s;
             if (speed > threshold && pile.HasSnow())
             {
@@ -782,12 +815,18 @@ public sealed class SnowSimulation
         float speed = MathF.Sqrt(_cvx * _cvx + _cvy * _cvy);
         foreach (var pile in _windowOrder)
         {
-            KickPile(pile, speed, dt);
+            if (pile != _gatherPile)
+            {
+                KickPile(pile, speed, dt);
+            }
         }
 
         foreach (var m in _monitors)
         {
-            KickPile(m.Ground, speed, dt);
+            if (m.Ground != _gatherPile)
+            {
+                KickPile(m.Ground, speed, dt);
+            }
         }
     }
 
