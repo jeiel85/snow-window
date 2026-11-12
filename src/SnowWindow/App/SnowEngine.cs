@@ -98,6 +98,7 @@ internal sealed class SnowEngine : IDisposable
 
         using var timer = new FrameTimer();
         SnowRenderer? renderer = null;
+        GrabHandle? grab = null;
         List<MonitorInfo> monitors = new();
         var failures = new Queue<double>();
         var profiler = new FrameProfiler();
@@ -120,6 +121,8 @@ internal sealed class SnowEngine : IDisposable
                 {
                     if (running)
                     {
+                        grab?.Dispose();
+                        grab = null;
                         renderer?.Dispose();
                         renderer = null;
                         sim.Reset();
@@ -141,6 +144,7 @@ internal sealed class SnowEngine : IDisposable
                     sim.Prefill();
                     last = nextFrame = now;
                     nextMonitorPoll = now + MonitorPollSeconds;
+                    grab = TryCreateGrabHandle(sim);
                     Log.Info($"눈 내리기 켜짐 (모니터 {monitors.Count}대)");
                 }
 
@@ -187,6 +191,11 @@ internal sealed class SnowEngine : IDisposable
                 t0 = profiler.Add(FrameProfiler.Scan, t0);
                 sim.Update((float)(now - last), windows, cursor);
                 last = now;
+                if (grab != null)
+                {
+                    UpdateGrabHandle(grab, sim, cursor, renderer != null);
+                }
+
                 profiler.Add(FrameProfiler.Simulate, t0);
 
                 if (renderer != null)
@@ -228,7 +237,51 @@ internal sealed class SnowEngine : IDisposable
         }
         finally
         {
+            grab?.Dispose();
             renderer?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 눈덩이를 마우스로 잡을 수 있게 하는 작은 창. 만들지 못하면 눈덩이를 옮기는 기능만 빠지고
+    /// 나머지(내리기·쌓이기·뭉치기)는 그대로 돈다.
+    /// </summary>
+    private static GrabHandle? TryCreateGrabHandle(SnowSimulation sim)
+    {
+        try
+        {
+            return new GrabHandle(
+                onPress: () => Native.GetCursorPos(out var pt) && sim.TryGrab(pt.X, pt.Y),
+                onRelease: sim.ReleaseGrab);
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Error("눈덩이 잡기 창을 만들지 못해 눈덩이를 옮길 수 없습니다", ex);
+            return null;
+        }
+    }
+
+    /// <summary>커서가 보이는 눈덩이 위에 있으면 잡기 창을 그 위에 겹치고, 아니면 숨긴다.</summary>
+    private static void UpdateGrabHandle(GrabHandle grab, SnowSimulation sim, CursorSample cursor, bool drawing)
+    {
+        if (grab.Holding)
+        {
+            if (!sim.IsCarrying || !drawing)
+            {
+                grab.Cancel(); // 마우스 기능을 껐거나 그래픽 장치를 다시 만드는 중
+            }
+
+            return;
+        }
+
+        var ball = drawing && cursor.Valid ? sim.SnowballAt(cursor.X, cursor.Y) : null;
+        if (ball != null)
+        {
+            grab.ShowOver(ball.X, ball.Y, ball.GrabRadius);
+        }
+        else
+        {
+            grab.Hide();
         }
     }
 

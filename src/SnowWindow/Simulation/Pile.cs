@@ -26,6 +26,13 @@ public sealed class Pile
 
     public float ColW { get; }
     public float MaxH { get; }
+
+    /// <summary>창 더미면 그 창 핸들, 화면 바닥이면 0.</summary>
+    internal nint Handle { get; init; }
+
+    /// <summary>이번 프레임 창 목록(z-order 위→아래)에서 이 창의 위치. 이보다 앞의 창들이 이 창 위의 것을 가린다.</summary>
+    internal int ZIndex { get; set; }
+
     public float Scale { get; }
     public bool IsGround { get; }
 
@@ -43,6 +50,12 @@ public sealed class Pile
 
     /// <summary>쏟아낸 눈 면적 누적(일정량이 모이면 파편 입자 하나로 만든다).</summary>
     internal float ShedAccum;
+
+    /// <summary>이번 프레임에 창이 통째로 옮겨 간 거리(px)와 속도(px/s). 크기 변경은 이동으로 치지 않는다.</summary>
+    internal float MoveX;
+    internal float MoveSpeed;
+    internal float MoveVX;
+    internal float MoveVY;
 
     public int ColumnAt(float x) => (int)MathF.Floor((x - Left) / ColW);
 

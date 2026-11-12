@@ -12,7 +12,8 @@ Just run the downloaded exe — no installer and no .NET runtime needed. The exe
 - **It piles up on window top edges** and at the bottom of the screen (just above the taskbar). Parts hidden behind another window don't collect snow.
 - Shrinking a window spills the overflowing snow off the edge, and shaking a window fast knocks the snow off. When a window is closed or minimized, its snow falls down.
 - Moving the mouse over piled snow scatters it, and falling flakes get swept aside by the cursor.
-- Mouse and keyboard input passes straight through, so it never gets in the way of your work.
+- **Build a snowman.** Rub the cursor back and forth over piled snow and it rolls into a snowball that grows as you keep rubbing (drift sideways while rubbing to roll it along and gather more). Hover a snowball (the cursor turns into a hand), hold the left button to carry it, and let go to drop it, or flick to throw it (a hard throw smashes it). Drop a snowball onto another and it becomes a snowman with a face and twig arms. Snowballs ride along on windows, fall when a window closes, and melt very slowly.
+- Mouse and keyboard input passes straight through, so it never gets in the way of your work. The only exception is a click right on a snowball, which picks it up.
 - Snow pauses automatically on a monitor where a full-screen video or game is running.
 
 ## Usage
@@ -23,9 +24,9 @@ Right-click the snowflake icon in the notification area to open the menu. Left-c
 |---|---|
 | Snow (눈 내리기) | Turn snow on/off |
 | Snow amount (눈의 양) | Light (조금) / Normal (보통) / Heavy (펑펑) |
-| Scatter snow with mouse (마우스로 눈 흩날리기) | Turn mouse interaction on/off |
+| Scatter and gather snow with mouse (마우스로 눈 흩날리기·뭉치기) | Turn mouse interaction on/off: scattering, making snowballs and picking them up. When off, nothing ever catches a click |
 | Smooth motion (부드러운 움직임, 60fps) | Default is 30fps. 60fps is smoother but roughly doubles the CPU and GPU load |
-| Clear piled snow (쌓인 눈 치우기) | Removes all piled snow |
+| Clear piled snow (쌓인 눈 치우기) | Removes all piled snow and snowballs |
 | Snow only when it snows outside (밖에 눈 올 때만 내리기) | Weather mode. Checks the local weather every 15 minutes and snows only while it is snowing outside, as much as outside (light / moderate / heavy). While it is on, Snow and Snow amount are greyed out, and left-clicking the icon shows the current weather |
 | Install update (업데이트 설치) | Appears at the top of the menu when a newer release is on GitHub. Downloads, verifies and swaps in the new exe, then restarts |
 | Update → Check now / Check automatically (업데이트 → 지금 확인 / 자동으로 확인) | Checks GitHub for a newer release now / once a day (on by default) |
@@ -92,11 +93,13 @@ The landing page is the single file `docs/index.html`, served by GitHub Pages fr
 SnowEngine (dedicated thread, 30/60fps)
  ├─ WindowChangeWatcher  Detects window moves/show/hide/z-order changes via WinEvent → rescans only when something changed (and every second as a safety net)
  ├─ WindowTracker        Collects the window list (z-order, actual DWM borders) with EnumWindows
- ├─ SnowSimulation       Flakes, landing, piles (per-column heightmaps), avalanche smoothing, spill-off, mouse scattering. No Win32 dependency → covered by unit tests
+ ├─ SnowSimulation       Flakes, landing, piles (per-column heightmaps), avalanche smoothing, spill-off, mouse scattering, snowballs and snowmen. No Win32 dependency → covered by unit tests
+ ├─ GrabHandle           A tiny, nearly invisible round window kept over the snowball under the cursor so it alone can be clicked and dragged
  └─ SnowRenderer         One transparent click-through topmost window per monitor + DirectComposition swap chain + Direct2D (sprite batches for flakes)
 TrayApp (UI thread)      Tray menu, settings save, startup registration
 ```
 
 - The overlay window uses `WS_EX_NOREDIRECTIONBITMAP | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST`, so it has no GDI buffer and lets mouse input through.
+- To make snowballs grabbable without giving up click-through, the overlay stays transparent and a separate round window (`SetWindowRgn`, alpha 1/255, `WS_EX_NOACTIVATE`) sits over the hovered snowball only. Clicks outside that circle never reach the app; pressing on it doesn't activate anything, and the mouse is captured while dragging so the window underneath doesn't see a drag.
 - All coordinates are physical pixels on a Per-Monitor V2 basis.
 - `tools/make_icon.py` generates the app icon (`src/SnowWindow/Assets/snow.ico`).

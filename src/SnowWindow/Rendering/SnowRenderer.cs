@@ -37,6 +37,7 @@ internal sealed class SnowRenderer : IDisposable
     private readonly ID2D1SpriteBatch _batch;
     private readonly ID2D1LinearGradientBrush _pileBrush;
     private readonly ID2D1SolidColorBrush _rimBrush;
+    private readonly SnowballPainter _snowballs;
 
     private readonly List<Overlay> _overlays = new();
     private readonly List<PileShape> _shapes = new();
@@ -87,6 +88,7 @@ internal sealed class SnowRenderer : IDisposable
         }
 
         _rimBrush = _ctx.CreateSolidColorBrush(new Color4(0.40f, 0.48f, 0.60f, 0.55f));
+        _snowballs = new SnowballPainter(_ctx, _d2dFactory);
     }
 
     public void SetMonitors(IReadOnlyList<MonitorInfo> monitors)
@@ -138,7 +140,7 @@ internal sealed class SnowRenderer : IDisposable
                     continue;
                 }
 
-                t = DrawOverlay(ov, spriteCount, profiler, t);
+                t = DrawOverlay(ov, sim, spriteCount, profiler, t);
                 if (!ov.Shown)
                 {
                     OverlayWindow.Show(ov.Hwnd); // 첫 프레임을 그린 뒤에 보여서 쓰레기 화면이 비치지 않게 한다
@@ -160,6 +162,7 @@ internal sealed class SnowRenderer : IDisposable
     public void Dispose()
     {
         DisposeOverlays();
+        _snowballs.Dispose();
         _rimBrush.Dispose();
         _pileBrush.Dispose();
         _batch.Dispose();
@@ -173,7 +176,7 @@ internal sealed class SnowRenderer : IDisposable
         _d2dFactory.Dispose();
     }
 
-    private long DrawOverlay(Overlay ov, int spriteCount, FrameProfiler profiler, long t)
+    private long DrawOverlay(Overlay ov, SnowSimulation sim, int spriteCount, FrameProfiler profiler, long t)
     {
         var b = ov.Info.Bounds;
         var world = Matrix3x2.CreateTranslation(-b.Left, -b.Top);
@@ -200,6 +203,11 @@ internal sealed class SnowRenderer : IDisposable
         }
 
         _ctx.Transform = world;
+        if (sim.Snowballs.Count > 0)
+        {
+            _snowballs.Draw(_ctx, sim.Snowballs, b); // 쌓인 눈 앞, 내리는 눈 뒤
+        }
+
         t = profiler.Add(FrameProfiler.Piles, t);
         if (spriteCount > 0)
         {
