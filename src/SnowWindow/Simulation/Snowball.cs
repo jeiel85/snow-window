@@ -46,6 +46,9 @@ public sealed class Snowball
     /// <summary>false면 받치는 창 윗변이 더 위쪽 창에 가려져 있어 그리지도, 잡지도 않는다.</summary>
     public bool Visible { get; internal set; } = true;
 
+    /// <summary>눈사람 몸통의 나뭇가지 팔이 중심에서 뻗는 가로 거리(반지름 배수).</summary>
+    public const float ArmSpan = 1.95f;
+
     public float Area => MathF.PI * R * R;
 
     /// <summary>마우스로 잡을 수 있는 반경(눈덩이보다 조금 넉넉하게).</summary>
@@ -67,6 +70,9 @@ public sealed class Snowball
 
     internal bool Removed;
     internal bool HasBallOnTop;
+
+    /// <summary>맨 아래에서 받치는 창의 z 위치(창 목록 인덱스). 화면 바닥이면 -1.</summary>
+    internal int SupportZ = -1;
 
     internal void SetArea(float area) => R = MathF.Sqrt(MathF.Max(0f, area) / MathF.PI);
 }

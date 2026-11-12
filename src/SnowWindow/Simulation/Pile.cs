@@ -29,6 +29,10 @@ public sealed class Pile
 
     /// <summary>창 더미면 그 창 핸들, 화면 바닥이면 0.</summary>
     internal nint Handle { get; init; }
+
+    /// <summary>이번 프레임 창 목록(z-order 위→아래)에서 이 창의 위치. 이보다 앞의 창들이 이 창 위의 것을 가린다.</summary>
+    internal int ZIndex { get; set; }
+
     public float Scale { get; }
     public bool IsGround { get; }
 

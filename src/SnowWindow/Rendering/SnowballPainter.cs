@@ -59,7 +59,7 @@ internal sealed class SnowballPainter : IDisposable
         var world = ctx.Transform;
         foreach (var b in balls)
         {
-            float reach = b.R * 1.9f; // 팔까지 포함
+            float reach = b.R * Snowball.ArmSpan; // 팔까지 포함
             if (!b.Visible || b.X + reach < bounds.Left || b.X - reach > bounds.Right
                 || b.Y + b.R < bounds.Top || b.Y - reach > bounds.Bottom)
             {

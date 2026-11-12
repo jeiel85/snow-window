@@ -54,6 +54,7 @@ public sealed partial class SnowSimulation
     private readonly HashSet<nint> _seen = new();
     private readonly List<nint> _gone = new();
     private readonly List<(float A, float B)> _intervals = new();
+    private IReadOnlyList<WindowSnapshot> _windows = Array.Empty<WindowSnapshot>(); // 이번 프레임 창 목록
 
     private float _time;
     private float _cx;
@@ -228,6 +229,7 @@ public sealed partial class SnowSimulation
         }
 
         _time += dt;
+        _windows = windows;
         UpdateCursor(cursor, dt);
         SyncWindows(windows, dt);
         Spawn(dt);
@@ -342,6 +344,7 @@ public sealed partial class SnowSimulation
                 Array.Clear(pile.H);
             }
 
+            pile.ZIndex = z;
             ComputeExposure(pile, windows, z);
             _windowOrder.Add(pile);
         }

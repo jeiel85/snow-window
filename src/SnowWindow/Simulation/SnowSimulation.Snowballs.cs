@@ -416,6 +416,7 @@ public sealed partial class SnowSimulation
         }
 
         AssignRoles();
+        UpdateVisibility();
     }
 
     private void StepCarried(Snowball b)
@@ -506,7 +507,6 @@ public sealed partial class SnowSimulation
             b.OffsetX *= MathF.Exp(-dt * 6f); // 올려놓은 자리에서 가운데로 자리 잡는다
             b.X = under.X + b.OffsetX;
             b.Y = under.Y - (under.R + b.R) * StackOverlap;
-            b.Visible = under.Visible;
             return;
         }
 
@@ -534,7 +534,6 @@ public sealed partial class SnowSimulation
             return;
         }
 
-        b.Visible = pile.IsExposed(pile.ColumnAt(b.X));
         b.Y = RestY(pile, b);
     }
 
@@ -765,6 +764,61 @@ public sealed partial class SnowSimulation
                 b.Below.Role = SnowballRole.Body;
             }
         }
+    }
+
+    /// <summary>
+    /// 창 위에 놓인 눈덩이는 그 창보다 앞쪽 창에 가려지면 숨긴다(그리지도, 잡지도 않는다).
+    /// 받치는 칸이 가려졌는지만 보면 눈 더미 높이 띠만 따지게 되어, 그보다 높이 솟은 눈덩이·머리·팔이
+    /// 앞쪽 창 위에 그려지고 그 창으로 갈 클릭을 가로챈다. 그래서 눈덩이가 그려지는 사각형 전체로 판정한다.
+    /// 화면 바닥 눈덩이는 바닥 눈과 마찬가지로 모든 창 앞에 있다.
+    /// </summary>
+    private void UpdateVisibility()
+    {
+        foreach (var b in _balls) // 아래쪽부터: 받치는 눈덩이가 먼저 정해진다
+        {
+            if (b.State != SnowballState.Resting)
+            {
+                b.Visible = true;
+                b.SupportZ = -1;
+                continue;
+            }
+
+            if (b.Below != null)
+            {
+                b.SupportZ = b.Below.SupportZ;
+                b.Visible = b.Below.Visible && !CoveredByWindowsAbove(b);
+                continue;
+            }
+
+            var pile = b.Pile!;
+            b.SupportZ = pile.IsGround ? -1 : pile.ZIndex;
+            b.Visible = pile.IsExposed(pile.ColumnAt(b.X)) && !CoveredByWindowsAbove(b);
+        }
+    }
+
+    private bool CoveredByWindowsAbove(Snowball b)
+    {
+        int z = Math.Min(b.SupportZ, _windows.Count);
+        if (z <= 0)
+        {
+            return false;
+        }
+
+        float half = b.Role == SnowballRole.Body ? b.R * Snowball.ArmSpan : b.R;
+        float left = b.X - half;
+        float right = b.X + half;
+        float top = b.Y - b.R;
+        float bottom = b.Y + b.R;
+        for (int j = 0; j < z; j++)
+        {
+            var o = _windows[j].Bounds;
+            if (o.Left < right && o.Right > left && o.Top < bottom && o.Bottom > top)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsCurrent(Pile pile)

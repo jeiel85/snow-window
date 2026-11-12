@@ -186,6 +186,54 @@ public class SnowballTests
     }
 
     [Fact]
+    public void A_snowball_rising_into_a_window_in_front_is_hidden_even_if_its_pile_is_not()
+    {
+        var sim = NewSim();
+        var lower = new WindowSnapshot(1, new RectI(400, 300, 1200, 800), true);
+        sim.Update(Dt, new[] { lower }, NoCursor);
+        var ball = Settle(sim, 800, 200, 20, new[] { lower });
+
+        // 앞쪽 창의 아래 변(280)이 눈 더미 높이 띠(286~300) 위에서 끝나 쌓인 눈은 가리지 않지만, 눈덩이(260~300)는 가린다.
+        var front = new WindowSnapshot(2, new RectI(700, 100, 900, 280), true);
+        var windows = new[] { front, lower };
+        sim.Update(Dt, windows, NoCursor);
+
+        var pile = sim.FindWindowPile(1)!;
+        Assert.True(pile.IsExposed(pile.ColumnAt(ball.X)));
+        Assert.False(ball.Visible);
+        Assert.Null(sim.SnowballAt(ball.X, ball.Y - ball.R * 0.5f));
+
+        // 앞쪽 창이 비켜나면 다시 보인다.
+        sim.Update(Dt, new[] { front with { Bounds = new RectI(1300, 100, 1500, 280) }, lower }, NoCursor);
+        Assert.True(ball.Visible);
+    }
+
+    [Fact]
+    public void A_snowman_head_covered_by_a_window_in_front_is_hidden_while_its_body_shows()
+    {
+        var sim = NewSim();
+        var lower = new WindowSnapshot(1, new RectI(400, 300, 1200, 800), true);
+        sim.Update(Dt, new[] { lower }, NoCursor);
+        var body = Settle(sim, 800, 200, 14, new[] { lower });
+        var head = Settle(sim, 800, 150, 9, new[] { lower });
+        Assert.Same(body, head.Below);
+
+        // 몸통(272~300)과 팔은 비켜 가고 머리(256~274)의 윗부분만 덮는 앞쪽 창.
+        var front = new WindowSnapshot(2, new RectI(790, 100, 810, 262), true);
+        sim.Update(Dt, new[] { front, lower }, NoCursor);
+
+        Assert.True(body.Visible);
+        Assert.False(head.Visible);
+        Assert.Null(sim.SnowballAt(head.X, head.Y));
+
+        // 몸통의 팔이 앞쪽 창에 걸쳐도 몸통째 숨긴다.
+        var beside = new WindowSnapshot(3, new RectI(800 + 18, 200, 900, 285), true);
+        sim.Update(Dt, new[] { beside, lower }, NoCursor);
+        Assert.False(body.Visible);
+        Assert.False(head.Visible);
+    }
+
+    [Fact]
     public void A_grabbed_snowball_follows_the_cursor_and_drops_gently_when_released()
     {
         var sim = NewSim();
