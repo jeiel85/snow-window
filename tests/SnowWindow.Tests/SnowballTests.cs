@@ -260,6 +260,65 @@ public class SnowballTests
         Assert.InRange(ball.X, 798f, 802f);
     }
 
+    /// <summary>
+    /// (x, y)에 있는 반지름 r 눈덩이를 들고 있다가 그 자리에서 가만히 놓고 5프레임 돌린다.
+    /// 짧게 보는 까닭: 면을 뚫고 떨어지면 화면 아래까지 갔다가 바닥으로 되돌려지므로, 오래 돌리면 구분되지 않는다.
+    /// </summary>
+    private static Snowball ReleaseAt(SnowSimulation sim, float x, float y, float r, IReadOnlyList<WindowSnapshot> windows)
+    {
+        var ball = sim.AddSnowball(x, y, r);
+        Assert.True(sim.TryGrab(x, y));
+        Run(sim, 10, windows, new CursorSample(x, y, true));
+        sim.ReleaseGrab();
+        Run(sim, 5, windows, new CursorSample(x, y, true));
+        return ball;
+    }
+
+    [Fact]
+    public void Letting_go_of_a_snowball_overlapping_a_window_edge_sets_it_on_the_edge()
+    {
+        var sim = NewSim();
+        var windows = new[] { new WindowSnapshot(1, new RectI(400, 300, 1200, 800), true) };
+        sim.Update(Dt, windows, NoCursor);
+
+        var ball = ReleaseAt(sim, 800, 290, 20, windows); // 아랫부분이 창 윗변(300) 아래로 들어가 있다
+
+        Assert.Equal(SnowballState.Resting, ball.State);
+        Assert.Same(sim.FindWindowPile(1), ball.Pile);
+        Assert.InRange(ball.Y, 279f, 281f);
+    }
+
+    [Fact]
+    public void Letting_go_of_a_snowball_sunk_in_ground_snow_or_over_the_taskbar_sets_it_on_the_ground()
+    {
+        var sim = NewSim();
+        Array.Fill(sim.GetGround(0).H, 10f);
+
+        var sunk = ReleaseAt(sim, 500, GroundY - 4f, 10, NoWindows);
+        var low = ReleaseAt(sim, 900, GroundY + 30f, 10, NoWindows); // 작업 표시줄 위
+
+        foreach (var ball in new[] { sunk, low })
+        {
+            Assert.Equal(SnowballState.Resting, ball.State);
+            Assert.Same(sim.GetGround(0), ball.Pile);
+            float surface = GroundY - 10f; // 쌓인 눈 표면에 반지름의 12%만큼 파묻혀 앉는다
+            Assert.InRange(ball.Y + ball.R, surface - 0.5f, surface + ball.R * 0.12f + 0.1f);
+        }
+    }
+
+    [Fact]
+    public void Letting_go_of_a_head_already_overlapping_the_body_builds_a_snowman()
+    {
+        var sim = NewSim();
+        var body = Settle(sim, 500, 900, 14);
+
+        var head = ReleaseAt(sim, 502, body.Y - body.R * 0.8f, 9, NoWindows); // 몸통에 겹친 채 놓는다
+
+        Assert.Same(body, head.Below);
+        Assert.Equal(SnowballRole.Head, head.Role);
+        Assert.InRange(head.Y, body.Y - (body.R + head.R), body.Y - body.R);
+    }
+
     [Fact]
     public void Throwing_a_snowball_hard_at_the_ground_smashes_it()
     {

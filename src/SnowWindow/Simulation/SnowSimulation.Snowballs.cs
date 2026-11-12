@@ -556,6 +556,7 @@ public sealed partial class SnowSimulation
         }
 
         // 이번 프레임에 지나친 면 가운데 가장 먼저 닿는(가장 높은) 곳에 내려앉는다.
+        // 놓을 때 이미 면에 파묻혀 있던 경우(눈 속을 굴려 왔거나, 창 윗변·몸통에 겹친 채 놓았다)도 그 위로 올라앉힌다.
         float contact = float.MaxValue;
         Pile? landPile = null;
         Snowball? landBall = null;
@@ -576,7 +577,9 @@ public sealed partial class SnowSimulation
             if (MathF.Abs(dx) < o.R * StackCatch)
             {
                 float y = o.Y - reach;
-                if (prevY <= y + 0.5f && b.Y >= y && y < contact)
+                bool crossed = prevY <= y + 0.5f && b.Y >= y;
+                bool sunkIn = b.Y > y && b.Y < o.Y; // 아래 눈덩이 윗부분에 겹쳐 있다
+                if ((crossed || sunkIn) && y < contact)
                 {
                     contact = y;
                     landBall = o;
@@ -630,7 +633,12 @@ public sealed partial class SnowSimulation
         }
 
         float y = RestY(pile, b);
-        if (prevY <= y + 0.5f && b.Y >= y && y < contact)
+        bool crossed = prevY <= y + 0.5f && b.Y >= y;
+
+        // 창은 중심이 윗변보다 위일 때만 걸친 것으로 본다(아래면 창 앞을 지나 떨어지는 중이다).
+        // 화면 바닥은 그 아래에 받칠 것이 없으니 얼마나 깊이 들어갔든 바닥 위로 올린다.
+        bool sunkIn = b.Y > y && (pile.IsGround || b.Y < pile.BaseY);
+        if ((crossed || sunkIn) && y < contact)
         {
             contact = y;
             landPile = pile;
